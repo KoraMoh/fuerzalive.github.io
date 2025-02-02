@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV Match Viewer</title>
+    <style>
+        /* Réinitialisation des marges et débordements */
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Poppins', sans-serif;
+            background-color: #000000;
+            color: rgb(0, 174, 255);
+        }
+
+        /* Conteneur principal en plein écran */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            cursor: url('img/cursor.png'), auto; /* Curseur personnalisé */
+        }
+
+        /* Fond animé qui suit la souris */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(
+                circle at var(--x) var(--y),
+                rgba(255, 255, 255, 0.1) 10%,
+                rgba(0, 0, 0, 0.95) 30%
+            );
+            pointer-events: none;
+            z-index: 1;
+            transition: background 0.2s ease-out;
+        }
+
+        /* Particules animées */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .particles span {
+            position: absolute;
+            display: block;
+            width: 20px;
+            height: 20px;
+            background: rgba(0, 195, 255, 0.5);
+            box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            border-radius: 50%;
+            animation: float 5s infinite ease-in-out;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 1;
+            }
+            50% {
+                transform: translateY(-100px) translateX(100px);
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateY(0) translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Conteneur du formulaire de login */
+        .login-container {
+            background-color: rgba(255, 51, 51, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%; /* Largeur maximale */
+            max-width: 400px; /* Largeur maximale pour une meilleure lisibilité */
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            animation: glow 3s infinite alternate;
+            z-index: 2;
+            text-align: center;
+        }
+
+        @keyframes glow {
+            0% {
+                box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            }
+            50% {
+                box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            }
+            100% {
+                box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            }
+        }
+
+        .login-container h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 26px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00c3ff;
+            animation: colorChange 2s infinite alternate;
+        }
+
+        @keyframes colorChange {
+            0% {
+                color: #00c3ff;
+            }
+            50% {
+                color: #ff00ff;
+            }
+            100% {
+                color: #00c3ff;
+            }
+        }
+
+        .login-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .login-form input {
+            padding: 10px;
+            border: 2px solid #00c3ff;
+            border-radius: 30px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #00c3ff;
+            font-size: 16px;
+            outline: none;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .login-form input::placeholder {
+            color: rgba(0, 174, 255, 0.7);
+        }
+
+        .login-form input:focus {
+            border-color: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+        }
+
+        .login-form button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 30px;
+            background-color: #00c3ff;
+            color: #000;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .login-form button:hover {
+            background-color: #ff00ff;
+            box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+        }
+
+        .error-message {
+            color: #ff0000;
+            font-size: 14px;
+            display: none;
+            margin-top: 10px;
+            animation: shake 0.5s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            25% {
+                transform: translateX(-10px);
+            }
+            50% {
+                transform: translateX(10px);
+            }
+            75% {
+                transform: translateX(-10px);
+            }
+        }
+
+        /* Masquer le contenu principal par défaut */
+        .iptv-menu {
+            display: none;
+        }
+
+        /* Conteneur du menu IPTV */
+        .iptv-menu {
+            background-color: rgba(255, 51, 51, 0.1);
+            padding: 25px;
+            border-radius: 20px;
+            width: 90%; /* Largeur maximale */
+            max-width: 600px; /* Largeur maximale pour une meilleure lisibilité */
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            animation: glow 3s infinite alternate;
+            z-index: 2;
+        }
+
+        .iptv-menu h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 26px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #00c3ff;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+            gap: 10px; /* Espacement entre les boutons */
+        }
+
+        .tab-button {
+            padding: 8px 15px;
+            margin: 0;
+            cursor: pointer;
+            background: linear-gradient(135deg, rgba(7, 167, 241, 0.4), rgba(167, 0, 233, 0));
+            border: none;
+            color: rgb(255, 255, 255);
+            border-radius: 30px;
+            font-size: 14px; /* Taille de police réduite */
+            font-weight: bold; /* Texte en gras */
+            font-style: italic; /* Texte en italique */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            text-transform: uppercase; /* Texte en majuscules */
+        }
+
+        .tab-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgb(0, 186, 243);
+        }
+
+        .tab-button.active {
+            background: #01b7fff6;
+        }
+
+        .tab-button.football {
+            animation: footballGlow 2s infinite alternate;
+        }
+
+        .tab-button.film {
+            animation: filmGlow 2s infinite alternate;
+        }
+
+        .tab-button.series {
+            animation: seriesGlow 2s infinite alternate;
+        }
+
+        @keyframes footballGlow {
+            0% {
+                box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            }
+            100% {
+                box-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000, 0 0 40px #ff0000;
+            }
+        }
+
+        @keyframes filmGlow {
+            0% {
+                box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            }
+            100% {
+                box-shadow: 0 0 10px #ffcc00, 0 0 20px #ffcc00, 0 0 40px #ffcc00;
+            }
+        }
+
+        @keyframes seriesGlow {
+            0% {
+                box-shadow: 0 0 10px #00c3ff, 0 0 20px #00c3ff, 0 0 40px #00c3ff;
+            }
+            100% {
+                box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            }
+        }
+
+        .tab-content {
+            display: none;
+            margin-top: 20px;
+            color: #ffffff;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .toggle-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            transition: background-color 0.3s, transform 0.2s;
+            cursor: pointer;
+        }
+
+        .toggle-item:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: scale(1.03);
+        }
+
+        .toggle-item label {
+            flex: 1;
+            font-size: 16px;
+            padding-right: 10px;
+            color: #00c3ff;
+            line-height: 1.5;
+        }
+
+        .toggle-item input[type="checkbox"] {
+            width: 50px;
+            height: 25px;
+            appearance: none;
+            background-color: #00aeff;
+            border-radius: 20px;
+            position: relative;
+            outline: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+
+        .toggle-item input[type="checkbox"]:checked {
+            background-color: #259c16;
+        }
+
+        .toggle-item input[type="checkbox"]::before {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            background-color: rgb(255, 255, 255);
+            border-radius: 50%;
+            top: 1.5px;
+            left: 2px;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+
+        .toggle-item input[type="checkbox"]:checked::before {
+            transform: translateX(25px);
+        }
+
+        .icon {
+            margin-right: 10px;
+            width: 24px;
+            height: 24px;
+        }
+
+        .dev-by {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #00c3ff;
+            animation: colorChange 2s infinite alternate;
+        }
+
+        .dev-by a {
+            color: inherit;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .dev-by a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Particules animées -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Formulaire de login -->
+    <div class="login-container">
+        <h1>Login</h1>
+        <form class="login-form">
+            <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+            <input type="password" id="key" placeholder="Clé d'accès" required>
+            <button type="button" onclick="login()">Se connecter</button>
+            <div class="error-message" id="error-message">Nom d'utilisateur ou clé incorrecte.</div>
+        </form>
+    </div>
+
+    <!-- Contenu principal (masqué par défaut) -->
+    <div class="iptv-menu">
+        <h1>IPTV Match Viewer</h1>
+
+        <div class="tabs">
+            <button class="tab-button football active" onclick="openTab('football')">Football</button>
+            <button class="tab-button film" onclick="openTab('film')">Film</button>
+            <button class="tab-button series" onclick="openTab('series')">Séries</button>
+        </div>
+
+        <div id="football" class="tab-content active">
+            <h2>Football Matches</h2>
+            <div class="toggle-item">
+                <label for="match1">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Match 1: Team A vs Team B
+                </label>
+                <input type="checkbox" id="match1" onchange="activateMatch('https://fram.sport4all.online/albaplayer/bein1/?serv=2')">
+            </div>
+            <div class="toggle-item">
+                <label for="match2">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Match 2: Team C vs Team D
+                </label>
+                <input type="checkbox" id="match2" onchange="activateMatch('https://example.com/football-match-2')">
+            </div>
+            <div class="toggle-item">
+                <label for="match3">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Match 3: Team E vs Team F
+                </label>
+                <input type="checkbox" id="match3" onchange="activateMatch('https://example.com/football-match-3')">
+            </div>
+        </div>
+
+        <div id="film" class="tab-content">
+            <h2>Films</h2>
+            <div class="toggle-item">
+                <label for="film1">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Film 1: Action Movie
+                </label>
+                <input type="checkbox" id="film1" onchange="activateMatch('https://example.com/film-1')">
+            </div>
+            <div class="toggle-item">
+                <label for="film2">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Film 2: Comedy Movie
+                </label>
+                <input type="checkbox" id="film2" onchange="activateMatch('https://example.com/film-2')">
+            </div>
+            <div class="toggle-item">
+                <label for="film3">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Film 3: Sci-Fi Movie
+                </label>
+                <input type="checkbox" id="film3" onchange="activateMatch('https://example.com/film-3')">
+            </div>
+        </div>
+
+        <div id="series" class="tab-content">
+            <h2>Séries</h2>
+            <div class="toggle-item">
+                <label for="series1">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Série 1: Drama Series
+                </label>
+                <input type="checkbox" id="series1" onchange="activateMatch('https://example.com/series-1')">
+            </div>
+            <div class="toggle-item">
+                <label for="series2">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Série 2: Mystery Series
+                </label>
+                <input type="checkbox" id="series2" onchange="activateMatch('https://example.com/series-2')">
+            </div>
+            <div class="toggle-item">
+                <label for="series3">
+                    <img src="https://github.com/WeansHHN/weanshhn.github.io/blob/main/img/gif/gifwaifu.gif?raw=true" class="icon"> Série 3: Fantasy Series
+                </label>
+                <input type="checkbox" id="series3" onchange="activateMatch('https://example.com/series-3')">
+            </div>
+        </div>
+
+        <div class="dev-by">
+           𝘿𝙚𝙫 𝘽𝙮<a href="https://example.com" target="_blank"> 𝙈𝙤𝙝𝙖</a>
+        </div>
+    </div>
+
+    <script>
+        // Fonction de connexion
+        function login() {
+            const username = document.getElementById('username').value;
+            const key = document.getElementById('key').value;
+
+            // Vérification des identifiants
+            if (username === "user" && key === "user") {
+                // Afficher le contenu principal
+                document.querySelector('.iptv-menu').style.display = 'block';
+                document.querySelector('.login-container').style.display = 'none';
+            } else {
+                // Afficher un message d'erreur
+                document.getElementById('error-message').style.display = 'block';
+            }
+        }
+
+        // Fonctions existantes...
+        function openTab(tabId) {
+            var tabs = document.getElementsByClassName("tab-content");
+            var buttons = document.getElementsByClassName("tab-button");
+
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove("active");
+            }
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove("active");
+            }
+
+            document.getElementById(tabId).classList.add("active");
+            event.currentTarget.classList.add("active");
+        }
+
+        function activateMatch(url) {
+            window.location.href = url; // Redirige vers le lien du match
+        }
+
+        // Effet de lumière qui suit la souris
+        document.addEventListener('mousemove', function (e) {
+            const x = e.clientX;
+            const y = e.clientY;
+            document.documentElement.style.setProperty('--x', `${x}px`);
+            document.documentElement.style.setProperty('--y', `${y}px`);
+        });
+    </script>
+</body>
+
+</html>
